@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Zap, Copy, Share2, Shuffle, ArrowRight, GitCompare, Lightbulb, Github, Codepen } from "lucide-react";
-import { evaluateIdea, makeBrutal, RANDOM_IDEAS, EXAMPLE_IDEAS, ANALYSIS_MESSAGES, type EvaluationResult } from "@/lib/scoring";
+import { evaluateIdea, makeBrutal, addToHistory, RANDOM_IDEAS, EXAMPLE_IDEAS, ANALYSIS_MESSAGES, type EvaluationResult } from "@/lib/scoring";
 import { toast } from "sonner";
+import IdeaHistory from "@/components/IdeaHistory";
 
 const ScoreCard = ({ label, score, reason, brutal, delay, barClass }: {
   label: string; score: number; reason: string; brutal: boolean; delay: number; barClass: string;
@@ -52,6 +53,7 @@ const Index = () => {
   const [result, setResult] = useState<EvaluationResult | null>(null);
   const [result2, setResult2] = useState<EvaluationResult | null>(null);
   const [compareMode, setCompareMode] = useState(false);
+  const [historyRefresh, setHistoryRefresh] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const barClass = brutal ? "score-bar-fill-warning" : "score-bar-fill";
@@ -69,17 +71,21 @@ const Index = () => {
       if (msgIndex < ANALYSIS_MESSAGES.length) {
         setAnalysisMsg(ANALYSIS_MESSAGES[msgIndex]);
       }
-    }, 400);
+    }, 300);
 
     setTimeout(() => {
       clearInterval(msgInterval);
       setAnalyzing(false);
       const r1 = evaluateIdea(idea);
       setResult(r1);
+      addToHistory(idea, r1);
       if (compareMode && idea2.trim()) {
-        setResult2(evaluateIdea(idea2));
+        const r2 = evaluateIdea(idea2);
+        setResult2(r2);
+        addToHistory(idea2, r2);
       }
-    }, 1800);
+      setHistoryRefresh(prev => prev + 1);
+    }, 2200);
   };
 
   const handleRandom = () => {
@@ -94,6 +100,13 @@ const Index = () => {
     setResult(null);
     setResult2(null);
     textareaRef.current?.focus();
+  };
+
+  const handleRestoreFromHistory = (restoredIdea: string, restoredResult: EvaluationResult) => {
+    setIdea(restoredIdea);
+    setResult(restoredResult);
+    setResult2(null);
+    setCompareMode(false);
   };
 
   const handleCopy = () => {
@@ -310,20 +323,25 @@ const Index = () => {
             )}
           </div>
         )}
+
+        {/* History */}
+        <div className="mb-8">
+          <IdeaHistory onRestore={handleRestoreFromHistory} refreshKey={historyRefresh} />
+        </div>
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t border-border py-8">
-        <div className="max-w-4xl mx-auto px-6 flex flex-col items-center gap-3">
-          <div className="flex items-center gap-4">
-            <a href="https://github.com/jashmaniarx?tab=repositories" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
-              <Github size={20} />
+      <footer className="w-full border-t border-border bg-card/80 backdrop-blur-sm py-10">
+        <div className="max-w-4xl mx-auto px-6 flex flex-col items-center gap-4">
+          <div className="flex items-center gap-5">
+            <a href="https://github.com/jashmaniarx?tab=repositories" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
+              <Github size={22} />
             </a>
-            <a href="https://codepen.io/jashmaniarx" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
-              <Codepen size={20} />
+            <a href="https://codepen.io/jashmaniarx" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
+              <Codepen size={22} />
             </a>
           </div>
-          <p className="text-sm text-muted-foreground">2026 © Jash Maniar | Is This a Good Idea?</p>
+          <p className="text-sm text-muted-foreground font-medium">2026 © Jash Maniar | Is This a Good Idea?</p>
         </div>
       </footer>
     </div>
